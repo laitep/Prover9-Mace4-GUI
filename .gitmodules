@@ -1,0 +1,3 @@
+[submodule "deps/ladr"]
+	path = deps/ladr
+	url = https://github.com/laitep/ladr

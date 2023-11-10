@@ -1,0 +1,3 @@
+wheel
+wxpython
+py2app
