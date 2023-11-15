@@ -96,7 +96,8 @@ class Input_panel(wx.Panel):
         if Win32():
             self.ed.Bind(wx.EVT_CHAR, self.on_char, self.ed)  # bad on Mac()
         else:
-            self.ed.OSXDisableAllSmartSubstitutions()
+            if Mac():
+                self.ed.OSXDisableAllSmartSubstitutions()
             self.ed.Bind(wx.EVT_TEXT, self.on_text, self.ed)  # bad on Win32()
 
         self.ed.SetFont(to_top(self).box_font)
