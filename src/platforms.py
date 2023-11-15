@@ -35,20 +35,3 @@ def Mac():
 
 def GTK():
     return wx.Platform == "__WXGTK__"
-
-
-def Mac_ppc():
-    if not Mac():
-        return False
-    else:
-        try:
-            arch = subprocess.Popen(
-                ["arch"], stdout=subprocess.PIPE
-            ).communicate()[0]
-        except:
-            arch = "??"
-        return arch.strip() == "ppc"
-
-
-if Win32():
-    import win32api, win32process

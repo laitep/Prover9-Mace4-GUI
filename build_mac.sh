@@ -84,8 +84,9 @@ echo "Installing dependencies..."
 # Install wheel first to speed up the build process
 pip install wheel
 pip install -r $SCRIPT_DIR/requirements.txt
+pip install py2app
 cd "$SCRIPT_DIR" || exit 1
-python $SCRIPT_DIR/setup.py py2app
+python $SCRIPT_DIR/setup_mac.py py2app
 cd "$OLDPWD" || exit 1
 deactivate
 

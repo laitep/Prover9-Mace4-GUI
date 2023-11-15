@@ -49,7 +49,7 @@ def run_and_wait(command, input="", fin=None):
             stdin=fin,
             stdout=fout,
             stderr=ferr,
-            creationflags=win32process.CREATE_NO_WINDOW,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         )
     else:
         process = subprocess.Popen(command, stdin=fin, stdout=fout, stderr=ferr)
@@ -511,7 +511,7 @@ class Run_program:
                     stdin=self.fin,
                     stdout=self.fout,
                     stderr=self.ferr,
-                    creationflags=win32process.CREATE_NO_WINDOW,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
                 )
             else:
                 self.process = subprocess.Popen(
@@ -571,7 +571,7 @@ class Run_program:
         if self.state == State.running or self.state == State.suspended:
             # Cleanup will occur when the 'run' thread terminates.
             if Win32():
-                win32api.TerminateProcess(int(self.process._handle), -1)
+                self.process.terminate()
             else:
                 os.kill(self.process.pid, signal.SIGKILL)
 
@@ -1132,7 +1132,7 @@ class Isofilter_frame(wx.Frame):
                 stdin=self.fin,
                 stdout=self.fout,
                 stderr=self.ferr,
-                creationflags=win32process.CREATE_NO_WINDOW,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
         else:
             self.process = subprocess.Popen(
@@ -1193,7 +1193,7 @@ class Isofilter_frame(wx.Frame):
         if self.state == State.running:
             # Cleanup will occur when the 'run' thread terminates.
             if Win32():
-                win32api.TerminateProcess(int(self.process._handle), -1)
+                self.process.terminate()
             else:
                 os.kill(self.process.pid, signal.SIGKILL)
         else:
