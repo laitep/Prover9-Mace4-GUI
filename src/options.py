@@ -19,17 +19,18 @@
 #
 
 # system imports
-
-import os, sys, types
 import re
+
 import wx
 
+# local imports
+import utilities
+from platforms import GTK
+from wx_utilities import error_dialog
+
+# Maximum size in 32 bit architectures (necessary for wx)
 sys_maxsize = 2147483647  # 2^31 - 1
 
-# local imports
-
-import utilities
-from wx_utilities import *
 
 # Types of Option record:
 
@@ -319,10 +320,7 @@ class Options_panel(wx.Panel):
 
     def on_reset(self, evt):
         for opt in self.options:
-            if (
-                opt[Type] in [Flag, Parm, Stringparm]
-                and opt[Value] != opt[Default]
-            ):
+            if opt[Type] in [Flag, Parm, Stringparm] and opt[Value] != opt[Default]:
                 update_option(opt, opt[Default])
                 update_shared(opt)
 
@@ -888,10 +886,7 @@ class P9_options:
                     None,
                     1,
                     None,
-                    (
-                        "Automatic selection of inference rules, based on the"
-                        " input."
-                    ),
+                    ("Automatic selection of inference rules, based on the" " input."),
                 ],
                 [
                     None,
@@ -1482,10 +1477,7 @@ class P9_options:
                     None,
                     1,
                     None,
-                    (
-                        "Before starting with selection ratio, select input"
-                        " clauses."
-                    ),
+                    ("Before starting with selection ratio, select input" " clauses."),
                 ],
                 [
                     None,
@@ -2567,7 +2559,7 @@ class P9_options:
                             if (
                                 opt1[Type] == opt2[Type]
                                 and opt1[Name] == opt2[Name]
-                                and not opt1 in opt2[Share]
+                                and opt1 not in opt2[Share]
                             ):
                                 link_options(opt1, opt2)
                                 # print 'Share:'; print_sharing(opt1)
@@ -2662,7 +2654,7 @@ def set_options(opt_str, opt_class, handle_dep=True):
                 try:
                     value = int(string_val)
                     opt_type = Parm
-                except:
+                except Exception:
                     value = string_val
                     opt_type = Stringparm
                 opt = opt_class.name_to_opt(name)

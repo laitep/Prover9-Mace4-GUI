@@ -20,17 +20,44 @@
 
 # system imports
 
-import os, wx, re, copy
-import time, _thread, tempfile, subprocess, signal
+import _thread
+import copy
+import os
+import re
+import signal
+import subprocess
+import sys
+import tempfile
+
+# package imports
+import wx
 
 # local imports
-
 import utilities
-from files import *
-from platforms import *
-from wx_utilities import *
-from my_setup import *
-from options import *
+from files import bin_dir, binary_ok, image_dir
+from options import (
+    Default,
+    Id,
+    Label_id,
+    Range,
+    Share,
+    Value,
+    update_label,
+    update_shared,
+)
+from platforms import Mac, Win32
+from wx_utilities import (
+    Busy_bar,
+    Invoke_event,
+    Mini_info,
+    State,
+    Text_frame,
+    error_dialog,
+    info_dialog,
+    max_width,
+    pos_for_center,
+    to_top,
+)
 
 
 def run_and_wait(command, input="", fin=None):
@@ -150,9 +177,7 @@ class Prover9:
             error_dialog("The logo file %s cannot be found." % self.logo_path)
             return None
         else:
-            return wx.Image(
-                self.logo_path, wx.BITMAP_TYPE_GIF
-            ).ConvertToBitmap()
+            return wx.Image(self.logo_path, wx.BITMAP_TYPE_GIF).ConvertToBitmap()
 
     def get_info_from_stderr(self, lines):
         stats = utilities.grep_last("Given", lines)
@@ -198,9 +223,7 @@ class Mace4:
 
     # Compile regular expression for extracting stats from stderr.
     # Domain_size=8. Models=0. User_CPU=8.00.
-    r_info = re.compile(
-        "Domain_size=(\d+)\. Models=(\d+)\. User_CPU=(\d*\.\d*)\."
-    )
+    r_info = re.compile("Domain_size=(\d+)\. Models=(\d+)\. User_CPU=(\d*\.\d*)\.")
 
     exits = {}
     exits[0] = "Model(s)"
@@ -247,9 +270,7 @@ class Mace4:
             error_dialog("The logo file %s cannot be found." % self.logo_path)
             return None
         else:
-            return wx.Image(
-                self.logo_path, wx.BITMAP_TYPE_GIF
-            ).ConvertToBitmap()
+            return wx.Image(self.logo_path, wx.BITMAP_TYPE_GIF).ConvertToBitmap()
 
     def get_info_from_stderr(self, lines):
         line = utilities.grep_last("Domain_size=", lines)
@@ -561,9 +582,7 @@ class Run_program:
     def get_stderr_info(self):
         if self.state in [State.running, State.suspended, State.done]:
             self.ferr.seek(0)  # rewind
-            lines = list(
-                map(lambda x: x.decode("utf-8"), self.ferr.readlines())
-            )
+            lines = list(map(lambda x: x.decode("utf-8"), self.ferr.readlines()))
             info = self.program.get_info_from_stderr(lines)
             return info
 
@@ -612,9 +631,7 @@ class Program_panel(wx.Panel):
             opt[Share] = [opt]
             (min, max) = opt[Range]
             options.share_external_option(opt)
-            self.time_ctrl = wx.SpinCtrl(
-                self, id, min=min, max=max, size=(75, -1)
-            )
+            self.time_ctrl = wx.SpinCtrl(self, id, min=min, max=max, size=(75, -1))
 
             self.time_ctrl.SetValue(opt[Default])
         else:
@@ -627,9 +644,7 @@ class Program_panel(wx.Panel):
         self.time_ctrl_opt = opt
 
         label = wx.StaticText(self, label_id, "Time Limit: ")
-        self.time_ctrl.SetToolTipString(
-            "A value of -1 means there is no limit."
-        )
+        self.time_ctrl.SetToolTipString("A value of -1 means there is no limit.")
         self.Bind(wx.EVT_SPINCTRL, self.on_time_ctrl, self.time_ctrl)
 
         time_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -751,9 +766,9 @@ class Program_panel(wx.Panel):
     def on_start(self, evt):
         if self.job:
             if self.job.solution and not self.job.saved_solution[0]:
-                message = (
-                    "There is an unsaved %s.  Delete the %s and continue?"
-                    % (self.program.solution_name, self.program.solution_name)
+                message = "There is an unsaved %s.  Delete the %s and continue?" % (
+                    self.program.solution_name,
+                    self.program.solution_name,
                 )
                 dlg = wx.MessageDialog(
                     self, message, "", wx.OK | wx.CANCEL | wx.ICON_QUESTION
@@ -819,8 +834,7 @@ class Program_panel(wx.Panel):
         if self.job.state == State.error:
             self.state_text.SetLabel("Program_Not_Found")
             error_dialog(
-                "%s binaries not found, looking in\n%s"
-                % (self.program.name, bin_dir())
+                "%s binaries not found, looking in\n%s" % (self.program.name, bin_dir())
             )
         else:
             message = self.program.exit_message(self.job.exit_code)
@@ -1008,9 +1022,7 @@ class Isofilter_frame(wx.Frame):
         self.models = models
         self.state = State.ready  # We'll use ready and running
 
-        wx.Frame.__init__(
-            self, parent, title="Isofilter", pos=pos_for_center((0, 0))
-        )
+        wx.Frame.__init__(self, parent, title="Isofilter", pos=pos_for_center((0, 0)))
 
         self.Connect(-1, -1, Invoke_event.my_EVT_INVOKE, self.on_invoke)
 
@@ -1024,9 +1036,7 @@ class Isofilter_frame(wx.Frame):
 
         out_lab = wx.StaticText(self, -1, "Output:")
         self.out_id = wx.NewId()
-        self.out_ctrl = wx.TextCtrl(
-            self, self.out_id, value=ops_string, size=(200, -1)
-        )
+        self.out_ctrl = wx.TextCtrl(self, self.out_id, value=ops_string, size=(200, -1))
 
         self.ignore_id = wx.NewId()
         self.ignore_cb = wx.CheckBox(self, self.ignore_id, "Ignore Constants")
@@ -1090,7 +1100,7 @@ class Isofilter_frame(wx.Frame):
             command = isofilter_command("isofilter")  # returns list
         else:
             command = isofilter_command("isofilter2")  # returns list
-        if command == None:
+        if command is None:
             error_dialog("Isofilter binary not found.")
             self.Close()
         else:
@@ -1180,8 +1190,7 @@ class Isofilter_frame(wx.Frame):
 
                 info_dialog(
                     "Isofilter received %d models, eliminated %d, "
-                    "giving %d nonisomorphic model(s)."
-                    % (input, input - kept, kept)
+                    "giving %d nonisomorphic model(s)." % (input, input - kept, kept)
                 )
 
         self.fin.close()

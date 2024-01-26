@@ -20,19 +20,32 @@
 
 # system imports
 
-import os, sys
+import copy
 import re
 import wx
 
 # local imports
-
 import partition_input
 import utilities
-from files import *
-from control import *
-from platforms import *
-from wx_utilities import *
-from options import *
+from control import Mace4, Prover9, syntax_check
+from options import (
+    Default,
+    Id,
+    Label_id,
+    M4_options,
+    P9_options,
+    Share,
+    Tip,
+    Value,
+    link_options_by_names,
+    option_triples_to_string,
+    set_options,
+    set_options_either,
+    update_label,
+    update_shared,
+)
+from platforms import Mac, Win32
+from wx_utilities import Text_frame, error_dialog, info_dialog, max_width, to_top
 
 # When saving an input file, a few comments are added; when
 # opening a saved input file, those comments are removed.
@@ -101,9 +114,7 @@ class Input_panel(wx.Panel):
             self.ed.Bind(wx.EVT_TEXT, self.on_text, self.ed)  # bad on Win32()
 
         self.ed.SetFont(to_top(self).box_font)
-        self.ed.SetDefaultStyle(
-            wx.TextAttr("BLACK", "WHITE", to_top(self).box_font)
-        )
+        self.ed.SetDefaultStyle(wx.TextAttr("BLACK", "WHITE", to_top(self).box_font))
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(sub_sizer, 0, wx.ALL | wx.GROW, 3)
@@ -207,14 +218,10 @@ class Input_panel(wx.Panel):
         # comments (line and block)
         spans = utilities.comment_spans(str)
         for start, end in spans:
-            self.ed.SetStyle(
-                start, end, wx.TextAttr(wx.Colour(0, 160, 0), font=font)
-            )
+            self.ed.SetStyle(start, end, wx.TextAttr(wx.Colour(0, 160, 0), font=font))
 
         # following needed on mac to undo italics (???)
-        self.ed.SetDefaultStyle(
-            wx.TextAttr("BLACK", "WHITE", to_top(self).box_font)
-        )
+        self.ed.SetDefaultStyle(wx.TextAttr("BLACK", "WHITE", to_top(self).box_font))
 
     def on_text(self, evt):
         # This gets called whenever the text is changed (EVT_TEXT)
@@ -283,9 +290,7 @@ class P9_options_panel(wx.Panel):
             style=wx.RA_SPECIFY_COLS,
         )
         self.rb2.SetToolTip(
-            wx.ToolTip(
-                "These are all of the Prover9 options, separated into groups."
-            )
+            wx.ToolTip("These are all of the Prover9 options, separated into groups.")
         )
         self.rb2.Enable(False)
 
@@ -436,9 +441,7 @@ class Setup_tabs(wx.Notebook):
         self.assumps = Input_panel(
             self.formulas, "Assumptions", to_top(self).auto_highlight()
         )
-        self.goals = Input_panel(
-            self.formulas, "Goals", to_top(self).auto_highlight()
-        )
+        self.goals = Input_panel(self.formulas, "Goals", to_top(self).auto_highlight())
 
         self.formulas.SplitHorizontally(self.assumps, self.goals)
         self.formulas.SetSashGravity(0.75)
@@ -564,9 +567,7 @@ class Setup_tabs(wx.Notebook):
     def store_input(self, input):
         input = utilities.remove_reg_exprs(All_added_comments, input)
 
-        (p9, m4, assumps, goals, opt, lang, other) = partition_input.partition(
-            input
-        )
+        (p9, m4, assumps, goals, opt, lang, other) = partition_input.partition(input)
 
         # Take the part from the if(Prover9), and split those (also Mace4)
 
@@ -584,15 +585,12 @@ class Setup_tabs(wx.Notebook):
         else:
             handle_dep = True
 
-        p9_opt_x = set_options(
-            p9_opt, self.p9_options.panels, handle_dep=handle_dep
-        )
+        p9_opt_x = set_options(p9_opt, self.p9_options.panels, handle_dep=handle_dep)
         if p9_opt_x != "":
             info_dialog(
                 "The following options from the if(Prover9) section"
                 " of the input were not recognized.  They have been"
-                ' added to the "Additional Input for Prover9" box.\n\n'
-                + p9_opt_x
+                ' added to the "Additional Input for Prover9" box.\n\n' + p9_opt_x
             )
 
         m4_opt_x = set_options(m4_opt, self.m4_options, handle_dep=handle_dep)
@@ -600,8 +598,7 @@ class Setup_tabs(wx.Notebook):
             info_dialog(
                 "The following options from the if(Mace4) section"
                 " of the input were not recognized.  They have been"
-                ' added to the "Additional Input for Mace4" box.\n\n'
-                + m4_opt_x
+                ' added to the "Additional Input for Mace4" box.\n\n' + m4_opt_x
             )
 
         opt_x = set_options_either(
@@ -612,8 +609,7 @@ class Setup_tabs(wx.Notebook):
             info_dialog(
                 "The following options from the "
                 " input file were not recognized.  They have been"
-                ' added to the "Additional Input for Prover9" box.\n\n'
-                + opt_x
+                ' added to the "Additional Input for Prover9" box.\n\n' + opt_x
             )
 
         self.language.input.ed.AppendText(lang.replace(".", ".\n"))
