@@ -20,17 +20,44 @@
 
 # system imports
 
-import os, wx, re, copy
-import time, _thread, tempfile, subprocess, signal
+import _thread
+import os
+import re
+import signal
+import subprocess
+import sys
+import tempfile
+
+# package imports
+import wx
 
 # local imports
-
 import utilities
-from files import *
-from platforms import *
-from wx_utilities import *
-from my_setup import *
-from options import *
+from files import bin_dir, binary_ok, image_dir
+from options import (
+    Default,
+    Id,
+    Label_id,
+    Range,
+    Share,
+    Value,
+    deepcopy_option,
+    update_label,
+    update_shared,
+)
+from platforms import Mac, Win32
+from wx_utilities import (
+    Busy_bar,
+    Invoke_event,
+    Mini_info,
+    State,
+    Text_frame,
+    error_dialog,
+    info_dialog,
+    max_width,
+    pos_for_center,
+    to_top,
+)
 
 
 def run_and_wait(command, input="", fin=None):
@@ -150,9 +177,7 @@ class Prover9:
             error_dialog("The logo file %s cannot be found." % self.logo_path)
             return None
         else:
-            return wx.Image(
-                self.logo_path, wx.BITMAP_TYPE_GIF
-            ).ConvertToBitmap()
+            return wx.Image(self.logo_path, wx.BITMAP_TYPE_GIF).ConvertToBitmap()
 
     def get_info_from_stderr(self, lines):
         stats = utilities.grep_last("Given", lines)
@@ -198,9 +223,7 @@ class Mace4:
 
     # Compile regular expression for extracting stats from stderr.
     # Domain_size=8. Models=0. User_CPU=8.00.
-    r_info = re.compile(
-        "Domain_size=(\d+)\. Models=(\d+)\. User_CPU=(\d*\.\d*)\."
-    )
+    r_info = re.compile("Domain_size=(\d+)\. Models=(\d+)\. User_CPU=(\d*\.\d*)\.")
 
     exits = {}
     exits[0] = "Model(s)"
@@ -247,9 +270,7 @@ class Mace4:
             error_dialog("The logo file %s cannot be found." % self.logo_path)
             return None
         else:
-            return wx.Image(
-                self.logo_path, wx.BITMAP_TYPE_GIF
-            ).ConvertToBitmap()
+            return wx.Image(self.logo_path, wx.BITMAP_TYPE_GIF).ConvertToBitmap()
 
     def get_info_from_stderr(self, lines):
         line = utilities.grep_last("Domain_size=", lines)
@@ -333,7 +354,7 @@ class Reformat_proof:
         sizer.Fit(dlg)
 
         self.grayout_options()
-        rc = dlg.Show(True)
+        dlg.Show(True)
 
     def grayout_options(self):
         if self.choice in ["standard", "parents_only", "xml"]:
@@ -430,7 +451,7 @@ class Reformat_model:
         menu = wx.Menu()
         self.map = {}
         for item in self.choices:
-            id = wx.NewId()
+            id = wx.NewIdRef()
             self.map[id] = item
             menu.Append(id, item)
             self.parent.Bind(wx.EVT_MENU, self.on_select, id=id)
@@ -561,9 +582,7 @@ class Run_program:
     def get_stderr_info(self):
         if self.state in [State.running, State.suspended, State.done]:
             self.ferr.seek(0)  # rewind
-            lines = list(
-                map(lambda x: x.decode("utf-8"), self.ferr.readlines())
-            )
+            lines = list(map(lambda x: x.decode("utf-8"), self.ferr.readlines()))
             info = self.program.get_info_from_stderr(lines)
             return info
 
@@ -603,18 +622,16 @@ class Program_panel(wx.Panel):
 
         # Time limit (widget shared with options panel elsewhere)
 
-        id = wx.NewId()
-        label_id = wx.NewId()
-        opt = copy.deepcopy(options.name_to_opt("max_seconds"))
+        id = wx.NewIdRef()
+        label_id = wx.NewIdRef()
+        opt = deepcopy_option(options.name_to_opt("max_seconds"))
         if opt:
             opt[Id] = id
             opt[Label_id] = label_id
             opt[Share] = [opt]
             (min, max) = opt[Range]
             options.share_external_option(opt)
-            self.time_ctrl = wx.SpinCtrl(
-                self, id, min=min, max=max, size=(75, -1)
-            )
+            self.time_ctrl = wx.SpinCtrl(self, id, min=min, max=max, size=(75, -1))
 
             self.time_ctrl.SetValue(opt[Default])
         else:
@@ -627,9 +644,7 @@ class Program_panel(wx.Panel):
         self.time_ctrl_opt = opt
 
         label = wx.StaticText(self, label_id, "Time Limit: ")
-        self.time_ctrl.SetToolTipString(
-            "A value of -1 means there is no limit."
-        )
+        self.time_ctrl.SetToolTip("A value of -1 means there is no limit.")
         self.Bind(wx.EVT_SPINCTRL, self.on_time_ctrl, self.time_ctrl)
 
         time_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -642,18 +657,16 @@ class Program_panel(wx.Panel):
         # Start, Pause, Kill
 
         self.start_btn = wx.Button(self, -1, "Start")
-        self.start_btn.SetToolTipString(
-            "Start %s with the current input." % program.name
-        )
+        self.start_btn.SetToolTip("Start %s with the current input." % program.name)
         self.Bind(wx.EVT_BUTTON, self.on_start, self.start_btn)
         self.pause_btn = wx.Button(self, -1, "Pause")
-        self.pause_btn.SetToolTipString("Pause or Resume %s." % program.name)
+        self.pause_btn.SetToolTip("Pause or Resume %s." % program.name)
         self.pause_btn.Enable(False)
         self.Bind(wx.EVT_BUTTON, self.on_pause_resume, self.pause_btn)
         if Win32():
             self.pause_btn.Show(False)
         self.kill_btn = wx.Button(self, -1, "Kill")
-        self.kill_btn.SetToolTipString("Kill %s process." % program.name)
+        self.kill_btn.SetToolTip("Kill %s process." % program.name)
         self.kill_btn.Enable(False)
         self.Bind(wx.EVT_BUTTON, self.on_kill, self.kill_btn)
 
@@ -679,7 +692,7 @@ class Program_panel(wx.Panel):
         # Info, Show/Save
 
         self.info_btn = wx.Button(self, -1, "Info")
-        self.info_btn.SetToolTipString(
+        self.info_btn.SetToolTip(
             "Show some statistics on the %s search." % program.name
         )
         self.Bind(wx.EVT_BUTTON, self.on_info, self.info_btn)
@@ -687,7 +700,7 @@ class Program_panel(wx.Panel):
 
         self.show_save_btn = wx.Button(self, -1, "Show/Save")
         if not Mac():
-            self.show_save_btn.SetToolTipString(
+            self.show_save_btn.SetToolTip(
                 "The choices refer to the most recent %s search." % program.name
             )
         self.Bind(wx.EVT_BUTTON, self.on_show_save, self.show_save_btn)
@@ -751,9 +764,9 @@ class Program_panel(wx.Panel):
     def on_start(self, evt):
         if self.job:
             if self.job.solution and not self.job.saved_solution[0]:
-                message = (
-                    "There is an unsaved %s.  Delete the %s and continue?"
-                    % (self.program.solution_name, self.program.solution_name)
+                message = "There is an unsaved %s.  Delete the %s and continue?" % (
+                    self.program.solution_name,
+                    self.program.solution_name,
                 )
                 dlg = wx.MessageDialog(
                     self, message, "", wx.OK | wx.CANCEL | wx.ICON_QUESTION
@@ -819,8 +832,7 @@ class Program_panel(wx.Panel):
         if self.job.state == State.error:
             self.state_text.SetLabel("Program_Not_Found")
             error_dialog(
-                "%s binaries not found, looking in\n%s"
-                % (self.program.name, bin_dir())
+                "%s binaries not found, looking in\n%s" % (self.program.name, bin_dir())
             )
         else:
             message = self.program.exit_message(self.job.exit_code)
@@ -859,17 +871,17 @@ class Program_panel(wx.Panel):
     def on_show_save(self, evt):
         menu = wx.Menu()
 
-        id = wx.NewId()
+        id = wx.NewIdRef()
         menu.Append(id, self.program.name + " Input (from most recent search)")
         self.Bind(wx.EVT_MENU, self.ss_input, id=id)
 
-        id = wx.NewId()
+        id = wx.NewIdRef()
         menu.Append(id, self.program.name + " Output")
         self.Bind(wx.EVT_MENU, self.ss_output, id=id)
         if self.job.state == State.error:
             menu.Enable(id, False)
 
-        id = wx.NewId()
+        id = wx.NewIdRef()
         menu.Append(id, self.program.name + " " + self.program.solution_name)
         self.Bind(wx.EVT_MENU, self.ss_solution, id=id)
         if self.job.exit_code != 0 and not self.job.solution:
@@ -936,7 +948,7 @@ class Program_panel(wx.Panel):
     def on_isofilter(self, evt):
         parent = evt.GetEventObject().GetParent()
         solution = parent.text
-        frame = Isofilter_frame(self, solution, self.job.saved_solution)
+        Isofilter_frame(self, solution, self.job.saved_solution)
 
     # The following two methods allow GUI events in the main thread
     # to be initiated by other threads.  See class Invoke_event and
@@ -959,7 +971,7 @@ class Control_panel(wx.Panel):
         # Show Input Button
 
         self.show_input_btn = wx.Button(self, -1, "Show Current Input")
-        self.show_input_btn.SetToolTipString(
+        self.show_input_btn.SetToolTip(
             "Show the data in the setup panel as a text file.\n"
             "This is what will be given to Prover9 and/or Mace4.\n"
             "This need not be saved before running Prover9 or Mace4."
@@ -1008,34 +1020,30 @@ class Isofilter_frame(wx.Frame):
         self.models = models
         self.state = State.ready  # We'll use ready and running
 
-        wx.Frame.__init__(
-            self, parent, title="Isofilter", pos=pos_for_center((0, 0))
-        )
+        wx.Frame.__init__(self, parent, title="Isofilter", pos=pos_for_center((0, 0)))
 
         self.Connect(-1, -1, Invoke_event.my_EVT_INVOKE, self.on_invoke)
 
         ops_string = " ".join(ops_in_interp(models))
 
         check_lab = wx.StaticText(self, -1, "Check:")
-        self.check_id = wx.NewId()
+        self.check_id = wx.NewIdRef()
         self.check_ctrl = wx.TextCtrl(
             self, self.check_id, value=ops_string, size=(200, -1)
         )
 
         out_lab = wx.StaticText(self, -1, "Output:")
-        self.out_id = wx.NewId()
-        self.out_ctrl = wx.TextCtrl(
-            self, self.out_id, value=ops_string, size=(200, -1)
-        )
+        self.out_id = wx.NewIdRef()
+        self.out_ctrl = wx.TextCtrl(self, self.out_id, value=ops_string, size=(200, -1))
 
-        self.ignore_id = wx.NewId()
+        self.ignore_id = wx.NewIdRef()
         self.ignore_cb = wx.CheckBox(self, self.ignore_id, "Ignore Constants")
 
-        self.wrap_id = wx.NewId()
+        self.wrap_id = wx.NewIdRef()
         self.wrap_cb = wx.CheckBox(self, self.wrap_id, "Enclose in List")
 
         alg_lab = wx.StaticText(self, -1, "Algorithm:")
-        self.alg_id = wx.NewId()
+        self.alg_id = wx.NewIdRef()
         self.alg_ch = wx.Choice(
             self,
             self.alg_id,
@@ -1090,7 +1098,7 @@ class Isofilter_frame(wx.Frame):
             command = isofilter_command("isofilter")  # returns list
         else:
             command = isofilter_command("isofilter2")  # returns list
-        if command == None:
+        if command is None:
             error_dialog("Isofilter binary not found.")
             self.Close()
         else:
@@ -1180,8 +1188,7 @@ class Isofilter_frame(wx.Frame):
 
                 info_dialog(
                     "Isofilter received %d models, eliminated %d, "
-                    "giving %d nonisomorphic model(s)."
-                    % (input, input - kept, kept)
+                    "giving %d nonisomorphic model(s)." % (input, input - kept, kept)
                 )
 
         self.fin.close()

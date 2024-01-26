@@ -20,7 +20,7 @@
 
 # system imports
 
-import wx, subprocess
+import wx
 
 # Platforms.  We'll assume GTK, and test for Win32 and Mac when necessary
 

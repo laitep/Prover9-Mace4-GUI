@@ -22,21 +22,29 @@
 
 # system imports
 
-import os, sys
+import os
 import re
-import wx
-import wx.adv
+import time
 from datetime import datetime
 
-# local imports
+import wx
+import wx.adv
 
-import partition_input
-import utilities
-from files import *
-from platforms import *
-from wx_utilities import *
-from my_setup import *
-from control import *
+# local imports
+from control import Control_panel, State
+from files import image_dir, sample_dir
+from my_setup import Setup_tabs
+from platforms import Win32
+from wx_utilities import (
+    Text_frame,
+    error_dialog,
+    info_dialog,
+    open_dir_style,
+    pos_for_center,
+    saveas_dir_style,
+    size_that_fits,
+    to_top,
+)
 
 Program_name = "Prover9-Mace4"
 Program_version = "0.5C"
@@ -346,13 +354,13 @@ class Main_frame(wx.Frame):
         # File menu
         self.fmenu = wx.Menu()
         submenu = self.sample_menu(sample_dir())
-        self.fmenu.AppendMenu(-1, "Sample Inputs", submenu)
+        self.fmenu.AppendSubMenu(submenu, "Sample Inputs")
         self.fmenu.AppendSeparator()
-        id = wx.NewId()
+        id = wx.NewIdRef()
         self.fmenu.Append(id, "Clear Entire Setup Panel")
         self.Bind(wx.EVT_MENU, self.clear_setup, id=id)
         self.fmenu.Append(wx.ID_OPEN, "&Open Input File...\tCtrl+O")
-        id = wx.NewId()
+        id = wx.NewIdRef()
         self.fmenu.Append(id, "Append To Input...")
         self.Bind(wx.EVT_MENU, self.on_append, id=id)
         self.fmenu.AppendSeparator()
@@ -372,12 +380,12 @@ class Main_frame(wx.Frame):
         # Preferences menu
         self.pref_menu = wx.Menu()
 
-        id = wx.NewId()
+        id = wx.NewIdRef()
         self.pref_menu.Append(id, "Font for Text Boxes...")
         self.Bind(wx.EVT_MENU, self.select_font, id=id)
         self.pref_menu.AppendSeparator()
 
-        self.highlight_id = wx.NewId()
+        self.highlight_id = wx.NewIdRef()
         self.pref_menu.Append(
             self.highlight_id,
             "Automatic Highlighting for Text Boxes",
@@ -388,10 +396,8 @@ class Main_frame(wx.Frame):
             self.pref_menu.Check(self.highlight_id, True)
         self.Bind(wx.EVT_MENU, self.highlight_toggle, id=self.highlight_id)
 
-        self.tooltip_id = wx.NewId()
-        self.pref_menu.Append(
-            self.tooltip_id, "Show Tool Tips", "", wx.ITEM_CHECK
-        )
+        self.tooltip_id = wx.NewIdRef()
+        self.pref_menu.Append(self.tooltip_id, "Show Tool Tips", "", wx.ITEM_CHECK)
         self.pref_menu.Check(self.tooltip_id, True)
         self.Bind(wx.EVT_MENU, self.tooltip_toggle, id=self.tooltip_id)
 
@@ -399,10 +405,10 @@ class Main_frame(wx.Frame):
 
         # View menu
         self.view_menu = wx.Menu()
-        self.view_id = wx.NewId()
+        self.view_id = wx.NewIdRef()
         self.view_menu.Append(self.view_id, "Hide Setup Panel")
         self.Bind(wx.EVT_MENU, self.setup_toggle, id=self.view_id)
-        self.run_id = wx.NewId()
+        self.run_id = wx.NewIdRef()
         self.view_menu.Append(self.run_id, "Hide Run Panel")
         self.Bind(wx.EVT_MENU, self.run_toggle, id=self.run_id)
         menu_bar.Append(self.view_menu, "&View")
@@ -432,9 +438,7 @@ class Main_frame(wx.Frame):
     def sample_menu(self, dir_path):
         "Recursive: leaves are *.in files."
         if not os.access(dir_path, os.R_OK):
-            error_dialog(
-                "The samples directory %s seems to be missing" % dir_path
-            )
+            error_dialog("The samples directory %s seems to be missing" % dir_path)
         else:
             menu = wx.Menu()
             entries = os.listdir(dir_path)
@@ -447,14 +451,14 @@ class Main_frame(wx.Frame):
                 path = os.path.join(dir_path, x)
                 if os.path.isdir(path):
                     submenu = self.sample_menu(path)
-                    menu.AppendMenu(-1, x, submenu)
+                    menu.AppendSubMenu(submenu, x)
                     have_dir = True
             if have_file and have_dir:
                 menu.AppendSeparator()
             for x in entries:
                 path = os.path.join(dir_path, x)
                 if os.path.isfile(path) and re.search("\.in$", path):
-                    id = wx.NewId()
+                    id = wx.NewIdRef()
                     self.probs[id] = path
                     menu.Append(id, x)
                     self.Bind(wx.EVT_MENU, self.load_sample, id=id)
@@ -466,7 +470,7 @@ class Main_frame(wx.Frame):
             f = open(path)
             input = f.read()
             self.setup.store_new_input(input, None)
-        except IOError as e:
+        except IOError:
             error_dialog("Error opening file %s for reading." % path)
 
         self.SetTitle("Prover9/Mace4")
@@ -484,9 +488,7 @@ class Main_frame(wx.Frame):
 
     def on_open(self, evt):
         (dir, style) = open_dir_style(self.current_path)  # depends on platform
-        dlg = wx.FileDialog(
-            self, message="Select a file", defaultDir=dir, style=style
-        )
+        dlg = wx.FileDialog(self, message="Select a file", defaultDir=dir, style=style)
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()  # full path
             try:
@@ -496,15 +498,13 @@ class Main_frame(wx.Frame):
                 self.current_path = path
                 self.fmenu.Enable(wx.ID_SAVE, True)
                 self.SetTitle(os.path.basename(path) + " - Prover9/Mace4")
-            except IOError as e:
+            except IOError:
                 error_dialog("Error opening file %s for reading." % path)
         dlg.Destroy()
 
     def on_append(self, evt):
         (dir, style) = open_dir_style(self.current_path)  # depends on platform
-        dlg = wx.FileDialog(
-            self, message="Select a file", defaultDir=dir, style=style
-        )
+        dlg = wx.FileDialog(self, message="Select a file", defaultDir=dir, style=style)
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()  # full path
             try:
@@ -514,7 +514,7 @@ class Main_frame(wx.Frame):
                 # self.current_path = path
                 # self.fmenu.Enable(wx.ID_SAVE, True)
                 # self.SetTitle(os.path.basename(path) + ' - Prover9/Mace4')
-            except IOError as e:
+            except IOError:
                 error_dialog("Error opening file %s for reading." % path)
         dlg.Destroy()
 
@@ -525,7 +525,7 @@ class Main_frame(wx.Frame):
             f.write("%% Saved by %s.\n\n" % Banner)
             f.write(input)
             return True
-        except IOError as e:
+        except IOError:
             error_dialog("Error opening file %s for writing." % path)
             return False
 
@@ -536,9 +536,7 @@ class Main_frame(wx.Frame):
             self.write_input(self.current_path)
 
     def on_saveas(self, evt):
-        (dir, style) = saveas_dir_style(
-            self.current_path
-        )  # depends on platform
+        (dir, style) = saveas_dir_style(self.current_path)  # depends on platform
         dlg = wx.FileDialog(
             self, message="Save file as ...", defaultDir=dir, style=style
         )
@@ -555,9 +553,7 @@ class Main_frame(wx.Frame):
 
     def get_help(self, evt):
         text = "\n" + Banner + "\n" + Help
-        frame = Text_frame(
-            self, to_top(self).box_font, "Help", text, saveas=False
-        )
+        frame = Text_frame(self, to_top(self).box_font, "Help", text, saveas=False)
         frame.Show(True)
 
     def get_about(self, evt):

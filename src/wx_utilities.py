@@ -20,11 +20,13 @@
 
 # system imports
 
-import os, re, wx
+import os
+import re
+
+import wx
 
 # local imports
-
-from platforms import *
+from platforms import Mac, Win32
 
 
 class State:
@@ -214,7 +216,7 @@ class Text_frame(wx.Frame):
                 # Do not update to_top(self).current_path
                 if self.saved_flag:
                     self.saved_flag[0] = True
-            except IOError as e:
+            except IOError:
                 error_dialog("Error opening file %s for writing." % path)
 
         dlg.Destroy()

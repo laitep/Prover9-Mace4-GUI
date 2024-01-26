@@ -19,17 +19,19 @@
 #
 
 # system imports
-
-import os, sys, types
+import copy
 import re
+
 import wx
 
+# local imports
+import utilities
+from platforms import GTK
+from wx_utilities import error_dialog
+
+# Maximum size in 32 bit architectures (necessary for wx)
 sys_maxsize = 2147483647  # 2^31 - 1
 
-# local imports
-
-import utilities
-from wx_utilities import *
 
 # Types of Option record:
 
@@ -57,6 +59,17 @@ Column = 6  # only for Group
 #
 # [id, label_id, share, depend, type, name, value, default, range, tooltip]
 # [None, None, None, Group, group_name, column]
+
+
+def deepcopy_option(option):
+    """
+    The NewIdRef function returns an object that is not pickleable, so
+    copy.deepcopy fails on options. This function works around that.
+    """
+    new_opt = [option[Id], option[Label_id], option[Share]] + copy.deepcopy(
+        option[Share + 1 :]
+    )
+    return new_opt
 
 
 def id_to_option(id, options):
@@ -226,8 +239,8 @@ class Options_panel(wx.Panel):
                     groups.append((box, g_sizer, "left"))
                     row = 0
 
-                id = wx.NewId()
-                label_id = wx.NewId()
+                id = wx.NewIdRef()
+                label_id = wx.NewIdRef()
                 opt[Id] = id
                 opt[Label_id] = label_id
                 opt[Value] = opt[Default]
@@ -253,11 +266,11 @@ class Options_panel(wx.Panel):
                     x.SetStringSelection(opt[Default])
                     tip = opt[Tip]
 
-                label.SetToolTipString(tip)
+                label.SetToolTip(tip)
                 if GTK():
                     # Tooltips on labels don't work in GTK.
                     # Large tooltips on widgets obscure choices in Mac.
-                    x.SetToolTipString(tip)
+                    x.SetToolTip(tip)
 
                 g_sizer.Add(
                     label,
@@ -319,10 +332,7 @@ class Options_panel(wx.Panel):
 
     def on_reset(self, evt):
         for opt in self.options:
-            if (
-                opt[Type] in [Flag, Parm, Stringparm]
-                and opt[Value] != opt[Default]
-            ):
+            if opt[Type] in [Flag, Parm, Stringparm] and opt[Value] != opt[Default]:
                 update_option(opt, opt[Default])
                 update_shared(opt)
 
@@ -888,10 +898,7 @@ class P9_options:
                     None,
                     1,
                     None,
-                    (
-                        "Automatic selection of inference rules, based on the"
-                        " input."
-                    ),
+                    ("Automatic selection of inference rules, based on the" " input."),
                 ],
                 [
                     None,
@@ -1482,10 +1489,7 @@ class P9_options:
                     None,
                     1,
                     None,
-                    (
-                        "Before starting with selection ratio, select input"
-                        " clauses."
-                    ),
+                    ("Before starting with selection ratio, select input" " clauses."),
                 ],
                 [
                     None,
@@ -2567,7 +2571,7 @@ class P9_options:
                             if (
                                 opt1[Type] == opt2[Type]
                                 and opt1[Name] == opt2[Name]
-                                and not opt1 in opt2[Share]
+                                and opt1 not in opt2[Share]
                             ):
                                 link_options(opt1, opt2)
                                 # print 'Share:'; print_sharing(opt1)
@@ -2662,7 +2666,7 @@ def set_options(opt_str, opt_class, handle_dep=True):
                 try:
                     value = int(string_val)
                     opt_type = Parm
-                except:
+                except Exception:
                     value = string_val
                     opt_type = Stringparm
                 opt = opt_class.name_to_opt(name)

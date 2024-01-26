@@ -20,11 +20,12 @@
 
 # system imports
 
-import os, sys, imp
+import imp
+import os
+import sys
 
 # local imports
-
-from platforms import *
+from platforms import Win32
 
 
 def path_info():
