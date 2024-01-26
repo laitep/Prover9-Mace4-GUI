@@ -378,7 +378,7 @@ class Language_panel(wx.Panel):
         # Prolog-Style Variables (Shared with other options widgets)
 
         id = wx.NewIdRef()
-        label_id = wx.NewIdRef()
+        _ = wx.NewIdRef()
         opt = deepcopy_option(options.name_to_opt("prolog_style_variables"))
         if opt:
             opt[Id] = id

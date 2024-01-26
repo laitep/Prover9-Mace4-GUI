@@ -354,7 +354,7 @@ class Reformat_proof:
         sizer.Fit(dlg)
 
         self.grayout_options()
-        rc = dlg.Show(True)
+        dlg.Show(True)
 
     def grayout_options(self):
         if self.choice in ["standard", "parents_only", "xml"]:
@@ -948,7 +948,7 @@ class Program_panel(wx.Panel):
     def on_isofilter(self, evt):
         parent = evt.GetEventObject().GetParent()
         solution = parent.text
-        frame = Isofilter_frame(self, solution, self.job.saved_solution)
+        Isofilter_frame(self, solution, self.job.saved_solution)
 
     # The following two methods allow GUI events in the main thread
     # to be initiated by other threads.  See class Invoke_event and
