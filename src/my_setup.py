@@ -20,7 +20,6 @@
 
 # system imports
 
-import copy
 import re
 import wx
 
@@ -37,6 +36,7 @@ from options import (
     Share,
     Tip,
     Value,
+    deepcopy_option,
     link_options_by_names,
     option_triples_to_string,
     set_options,
@@ -79,13 +79,13 @@ class Input_panel(wx.Panel):
         width = max_width([title_display], self) + 10  # +10 prevents wrap
         text = wx.StaticText(self, -1, title + ":", size=(width, -1))
         wff_btn = wx.Button(self, -1, "Well Formed?")
-        wff_btn.SetToolTipString(
+        wff_btn.SetToolTip(
             "Check syntax of %s.  If there are multiple "
             "errors, only the first will be shown." % title
         )
         self.Bind(wx.EVT_BUTTON, self.well_formed_check, wff_btn)
         self.hilite_btn = wx.Button(self, -1, "Highlight")
-        self.hilite_btn.SetToolTipString(
+        self.hilite_btn.SetToolTip(
             "Color comments and attributes in this box now. "
             "This button is a hack because on some platforms, "
             "the automatic highlighting causes an annoying "
@@ -93,7 +93,7 @@ class Input_panel(wx.Panel):
         )
         self.Bind(wx.EVT_BUTTON, self.on_hilite, self.hilite_btn)
         clear_btn = wx.Button(self, -1, "Clear")
-        clear_btn.SetToolTipString("Clear " + title)
+        clear_btn.SetToolTip("Clear " + title)
         self.Bind(wx.EVT_BUTTON, self.clear, clear_btn)
 
         sub_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -377,9 +377,9 @@ class Language_panel(wx.Panel):
 
         # Prolog-Style Variables (Shared with other options widgets)
 
-        id = wx.NewId()
-        label_id = wx.NewId()
-        opt = copy.deepcopy(options.name_to_opt("prolog_style_variables"))
+        id = wx.NewIdRef()
+        label_id = wx.NewIdRef()
+        opt = deepcopy_option(options.name_to_opt("prolog_style_variables"))
         if opt:
             opt[Id] = id
             opt[Label_id] = id  # we're not using a separate label here
@@ -397,7 +397,7 @@ class Language_panel(wx.Panel):
         self.prolog_cb_opt = opt
 
         self.Bind(wx.EVT_CHECKBOX, self.on_prolog, self.prolog_cb)
-        self.prolog_cb.SetToolTipString(tip)
+        self.prolog_cb.SetToolTip(tip)
 
         # Text Box
 

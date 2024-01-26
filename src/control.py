@@ -21,7 +21,6 @@
 # system imports
 
 import _thread
-import copy
 import os
 import re
 import signal
@@ -42,6 +41,7 @@ from options import (
     Range,
     Share,
     Value,
+    deepcopy_option,
     update_label,
     update_shared,
 )
@@ -451,7 +451,7 @@ class Reformat_model:
         menu = wx.Menu()
         self.map = {}
         for item in self.choices:
-            id = wx.NewId()
+            id = wx.NewIdRef()
             self.map[id] = item
             menu.Append(id, item)
             self.parent.Bind(wx.EVT_MENU, self.on_select, id=id)
@@ -622,9 +622,9 @@ class Program_panel(wx.Panel):
 
         # Time limit (widget shared with options panel elsewhere)
 
-        id = wx.NewId()
-        label_id = wx.NewId()
-        opt = copy.deepcopy(options.name_to_opt("max_seconds"))
+        id = wx.NewIdRef()
+        label_id = wx.NewIdRef()
+        opt = deepcopy_option(options.name_to_opt("max_seconds"))
         if opt:
             opt[Id] = id
             opt[Label_id] = label_id
@@ -644,7 +644,7 @@ class Program_panel(wx.Panel):
         self.time_ctrl_opt = opt
 
         label = wx.StaticText(self, label_id, "Time Limit: ")
-        self.time_ctrl.SetToolTipString("A value of -1 means there is no limit.")
+        self.time_ctrl.SetToolTip("A value of -1 means there is no limit.")
         self.Bind(wx.EVT_SPINCTRL, self.on_time_ctrl, self.time_ctrl)
 
         time_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -657,18 +657,16 @@ class Program_panel(wx.Panel):
         # Start, Pause, Kill
 
         self.start_btn = wx.Button(self, -1, "Start")
-        self.start_btn.SetToolTipString(
-            "Start %s with the current input." % program.name
-        )
+        self.start_btn.SetToolTip("Start %s with the current input." % program.name)
         self.Bind(wx.EVT_BUTTON, self.on_start, self.start_btn)
         self.pause_btn = wx.Button(self, -1, "Pause")
-        self.pause_btn.SetToolTipString("Pause or Resume %s." % program.name)
+        self.pause_btn.SetToolTip("Pause or Resume %s." % program.name)
         self.pause_btn.Enable(False)
         self.Bind(wx.EVT_BUTTON, self.on_pause_resume, self.pause_btn)
         if Win32():
             self.pause_btn.Show(False)
         self.kill_btn = wx.Button(self, -1, "Kill")
-        self.kill_btn.SetToolTipString("Kill %s process." % program.name)
+        self.kill_btn.SetToolTip("Kill %s process." % program.name)
         self.kill_btn.Enable(False)
         self.Bind(wx.EVT_BUTTON, self.on_kill, self.kill_btn)
 
@@ -694,7 +692,7 @@ class Program_panel(wx.Panel):
         # Info, Show/Save
 
         self.info_btn = wx.Button(self, -1, "Info")
-        self.info_btn.SetToolTipString(
+        self.info_btn.SetToolTip(
             "Show some statistics on the %s search." % program.name
         )
         self.Bind(wx.EVT_BUTTON, self.on_info, self.info_btn)
@@ -702,7 +700,7 @@ class Program_panel(wx.Panel):
 
         self.show_save_btn = wx.Button(self, -1, "Show/Save")
         if not Mac():
-            self.show_save_btn.SetToolTipString(
+            self.show_save_btn.SetToolTip(
                 "The choices refer to the most recent %s search." % program.name
             )
         self.Bind(wx.EVT_BUTTON, self.on_show_save, self.show_save_btn)
@@ -873,17 +871,17 @@ class Program_panel(wx.Panel):
     def on_show_save(self, evt):
         menu = wx.Menu()
 
-        id = wx.NewId()
+        id = wx.NewIdRef()
         menu.Append(id, self.program.name + " Input (from most recent search)")
         self.Bind(wx.EVT_MENU, self.ss_input, id=id)
 
-        id = wx.NewId()
+        id = wx.NewIdRef()
         menu.Append(id, self.program.name + " Output")
         self.Bind(wx.EVT_MENU, self.ss_output, id=id)
         if self.job.state == State.error:
             menu.Enable(id, False)
 
-        id = wx.NewId()
+        id = wx.NewIdRef()
         menu.Append(id, self.program.name + " " + self.program.solution_name)
         self.Bind(wx.EVT_MENU, self.ss_solution, id=id)
         if self.job.exit_code != 0 and not self.job.solution:
@@ -973,7 +971,7 @@ class Control_panel(wx.Panel):
         # Show Input Button
 
         self.show_input_btn = wx.Button(self, -1, "Show Current Input")
-        self.show_input_btn.SetToolTipString(
+        self.show_input_btn.SetToolTip(
             "Show the data in the setup panel as a text file.\n"
             "This is what will be given to Prover9 and/or Mace4.\n"
             "This need not be saved before running Prover9 or Mace4."
@@ -1029,23 +1027,23 @@ class Isofilter_frame(wx.Frame):
         ops_string = " ".join(ops_in_interp(models))
 
         check_lab = wx.StaticText(self, -1, "Check:")
-        self.check_id = wx.NewId()
+        self.check_id = wx.NewIdRef()
         self.check_ctrl = wx.TextCtrl(
             self, self.check_id, value=ops_string, size=(200, -1)
         )
 
         out_lab = wx.StaticText(self, -1, "Output:")
-        self.out_id = wx.NewId()
+        self.out_id = wx.NewIdRef()
         self.out_ctrl = wx.TextCtrl(self, self.out_id, value=ops_string, size=(200, -1))
 
-        self.ignore_id = wx.NewId()
+        self.ignore_id = wx.NewIdRef()
         self.ignore_cb = wx.CheckBox(self, self.ignore_id, "Ignore Constants")
 
-        self.wrap_id = wx.NewId()
+        self.wrap_id = wx.NewIdRef()
         self.wrap_cb = wx.CheckBox(self, self.wrap_id, "Enclose in List")
 
         alg_lab = wx.StaticText(self, -1, "Algorithm:")
-        self.alg_id = wx.NewId()
+        self.alg_id = wx.NewIdRef()
         self.alg_ch = wx.Choice(
             self,
             self.alg_id,

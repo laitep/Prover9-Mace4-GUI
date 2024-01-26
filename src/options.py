@@ -19,6 +19,7 @@
 #
 
 # system imports
+import copy
 import re
 
 import wx
@@ -58,6 +59,17 @@ Column = 6  # only for Group
 #
 # [id, label_id, share, depend, type, name, value, default, range, tooltip]
 # [None, None, None, Group, group_name, column]
+
+
+def deepcopy_option(option):
+    """
+    The NewIdRef function returns an object that is not pickleable, so
+    copy.deepcopy fails on options. This function works around that.
+    """
+    new_opt = [option[Id], option[Label_id], option[Share]] + copy.deepcopy(
+        option[Share + 1 :]
+    )
+    return new_opt
 
 
 def id_to_option(id, options):
@@ -227,8 +239,8 @@ class Options_panel(wx.Panel):
                     groups.append((box, g_sizer, "left"))
                     row = 0
 
-                id = wx.NewId()
-                label_id = wx.NewId()
+                id = wx.NewIdRef()
+                label_id = wx.NewIdRef()
                 opt[Id] = id
                 opt[Label_id] = label_id
                 opt[Value] = opt[Default]
@@ -254,11 +266,11 @@ class Options_panel(wx.Panel):
                     x.SetStringSelection(opt[Default])
                     tip = opt[Tip]
 
-                label.SetToolTipString(tip)
+                label.SetToolTip(tip)
                 if GTK():
                     # Tooltips on labels don't work in GTK.
                     # Large tooltips on widgets obscure choices in Mac.
-                    x.SetToolTipString(tip)
+                    x.SetToolTip(tip)
 
                 g_sizer.Add(
                     label,
